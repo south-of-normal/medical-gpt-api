@@ -8,6 +8,10 @@ app = Flask(__name__)
 def pubmed_search():
 
     query = request.args.get('query')
+    query = query.lower()
+
+    query = query.replace("lightheaded", "dizziness")
+    query = query.replace("vitamin supplements", "dietary supplements")
 
     # STEP 1: Search PubMed
     search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
