@@ -1,18 +1,36 @@
 from flask import Flask, request, jsonify
 import requests
 import xml.etree.ElementTree as ET
+import spacy
 
 app = Flask(__name__)
+nlp = spacy.load("en_core_web_sm")
 
 @app.route('/pubmed_search', methods=['GET'])
 def pubmed_search():
 
     query = request.args.get('query')
-    query = query.lower()
 
-    query = query.replace("lightheaded", "dizziness")
-    query = query.replace("vitamin supplements", "dietary supplements")
+    doc = nlp(query)
 
+    keywords = []
+
+    for token in doc:
+        if token.is_stop:
+            continue
+
+        if token.is_punct:
+            continue
+
+        if len(token.text) < 3:
+            continue
+
+        keywords.append(token.lemma_.lower())
+
+    query = " ".join(keywords)
+    print("Processed query:", query)
+    if not query.strip():
+        return jsonify({"results": []})
     # STEP 1: Search PubMed
     search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 
@@ -58,11 +76,18 @@ def pubmed_search():
     for article in root.findall(".//PubmedArticle"):
 
         title_elem = article.find(".//ArticleTitle")
-        abstract_elem = article.find(".//Abstract/AbstractText")
+        abstract_texts = article.findall(".//Abstract/AbstractText")
+
+        abstract = " ".join([
+            elem.text for elem in abstract_texts
+            if elem.text
+        ])
+        if not abstract:
+            abstract = "No abstract available"
+        
         pmid_elem = article.find(".//PMID")
 
         title = title_elem.text if title_elem is not None else "No title"
-        abstract = abstract_elem.text if abstract_elem is not None else "No abstract available"
         pmid = pmid_elem.text if pmid_elem is not None else "Unknown"
 
         results.append({
