@@ -1,36 +1,19 @@
 from flask import Flask, request, jsonify
 import requests
 import xml.etree.ElementTree as ET
-import spacy
 
 app = Flask(__name__)
-nlp = spacy.load("en_core_sci_sm")
 
 @app.route('/pubmed_search', methods=['GET'])
 def pubmed_search():
 
     query = request.args.get('query')
+
     if not query:
         return jsonify({"results": []})
 
-    doc = nlp(query)
+    print("Received query:", query)
 
-    keywords = []
-
-    for ent in doc.ents:
-        keywords.append(ent.text.lower())
-        
-    if not keywords:
-        for token in doc:
-            if not token.is_stop and not token.is_punct:
-                keywords.append(token.lemma_.lower())
-
-    keywords = list(set(keywords))
-
-    query = " ".join(keywords)
-    print("Processed query:", query)
-    if not query.strip():
-        return jsonify({"results": []})
     # STEP 1: Search PubMed
     search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 
@@ -38,7 +21,8 @@ def pubmed_search():
         "db": "pubmed",
         "term": query,
         "retmode": "json",
-        "retmax": 3
+        "retmax": 3,
+        "sort": "relevance"
     }
 
     search_response = requests.get(
@@ -68,7 +52,7 @@ def pubmed_search():
         params=fetch_params,
         timeout=10
     )
-    
+
     root = ET.fromstring(fetch_response.text)
 
     results = []
@@ -77,17 +61,18 @@ def pubmed_search():
 
         title_elem = article.find(".//ArticleTitle")
         abstract_texts = article.findall(".//Abstract/AbstractText")
+        pmid_elem = article.find(".//PMID")
+
+        title = title_elem.text if title_elem is not None else "No title"
 
         abstract = " ".join([
             elem.text for elem in abstract_texts
             if elem.text
         ])
+
         if not abstract:
             abstract = "No abstract available"
-        
-        pmid_elem = article.find(".//PMID")
 
-        title = title_elem.text if title_elem is not None else "No title"
         pmid = pmid_elem.text if pmid_elem is not None else "Unknown"
 
         results.append({
