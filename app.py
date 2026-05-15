@@ -24,7 +24,7 @@ def pubmed_search():
     if not keywords:
         for token in doc:
             if not token.is_stop and not token.is_punct:
-            keywords.append(token.lemma_.lower())
+                keywords.append(token.lemma_.lower())
 
     keywords = list(set(keywords))
 
@@ -69,7 +69,9 @@ def pubmed_search():
         params=fetch_params,
         timeout=10
     )
-
+    
+    print(fetch_response.text)
+    
     root = ET.fromstring(fetch_response.text)
 
     results = []
