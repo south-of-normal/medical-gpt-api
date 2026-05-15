@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 import spacy
 
 app = Flask(__name__)
-nlp = spacy.load("en_core_web_sm")
+nlp = spacy.load("en_core_sci_sm")
 
 @app.route('/pubmed_search', methods=['GET'])
 def pubmed_search():
