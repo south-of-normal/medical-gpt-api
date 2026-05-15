@@ -2,17 +2,16 @@ from flask import Flask, request, jsonify
 import requests
 import xml.etree.ElementTree as ET
 import spacy
-from scispacy.linking import EntityLinker
 
 app = Flask(__name__)
 nlp = spacy.load("en_core_sci_sm")
-
-nlp.add_pipe("scispacy_linker", config={"linker_name": "umls"})
 
 @app.route('/pubmed_search', methods=['GET'])
 def pubmed_search():
 
     query = request.args.get('query')
+    if not query:
+        return jsonify({"results": []})
 
     doc = nlp(query)
 
@@ -69,8 +68,6 @@ def pubmed_search():
         params=fetch_params,
         timeout=10
     )
-    
-    print(fetch_response.text)
     
     root = ET.fromstring(fetch_response.text)
 
