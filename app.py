@@ -2,9 +2,12 @@ from flask import Flask, request, jsonify
 import requests
 import xml.etree.ElementTree as ET
 import spacy
+from scispacy.linking import EntityLinker
 
 app = Flask(__name__)
 nlp = spacy.load("en_core_sci_sm")
+
+nlp.add_pipe("scispacy_linker", config={"linker_name": "umls"})
 
 @app.route('/pubmed_search', methods=['GET'])
 def pubmed_search():
@@ -15,17 +18,15 @@ def pubmed_search():
 
     keywords = []
 
-    for token in doc:
-        if token.is_stop:
-            continue
+    for ent in doc.ents:
+        keywords.append(ent.text.lower())
+        
+    if not keywords:
+        for token in doc:
+            if not token.is_stop and not token.is_punct:
+            keywords.append(token.lemma_.lower())
 
-        if token.is_punct:
-            continue
-
-        if len(token.text) < 3:
-            continue
-
-        keywords.append(token.lemma_.lower())
+    keywords = list(set(keywords))
 
     query = " ".join(keywords)
     print("Processed query:", query)
